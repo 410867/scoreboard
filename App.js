@@ -1,30 +1,19 @@
-import React, {Component, createContext, Fragment, useContext, useEffect, useState} from 'react';
+import React, {Component, createContext, useContext, useState} from 'react';
 import {
-  Alert,
-  AppState,
-  Button,
+  Button, Modal,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
+  TouchableOpacity, useColorScheme,
   View
 } from "react-native";
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import RenderingList from "./Screen/Components/RenderingList";
 
 import RNPickerSelect from 'react-native-picker-select';
-import TimerExample from "./Screen/Components/TimerExample";
-import TimeExample1 from "./Screen/Components/TimeExample1";
 import Stopwatch from "react-native-stopwatch-timer/lib/stopwatch";
-/*import ColorsScreen from "./Screen/Components/ColorsScreen";
-import ColorPickerExample from "./Screen/Components/ColorPickerExample";
-
-import {PaperProvider} from "react-native-paper";*/
-
-//import { ColorPicker, fromHsv } from 'react-native-color-picker';
 
 const Tab = createBottomTabNavigator();
 const DataContext = createContext();
@@ -33,14 +22,13 @@ const App = () => {
   const [list, setList] = useState([]);
   const [historyMatches, setHistoryMatches] = useState([]);
   const [id, setId] = useState(1);
-  const [time, setTime] = useState(0);
   const [count, setCount] = useState(0);    //При зміні рендерить екран
-  const [numberTimer, setNumberTimer] = useState('');
-
-  //const [color, setColor] = useState('#000000'); // Устанавливаем начальный цвет
+  const [numberTimer, setNumberTimer] = useState('7');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectColorId, setSelectColorId] = useState(0);
 
   if(list.length === 0) {
-    setList([...list, {id: 0, name: "Команда", count: "Рахунок", time: "Час", }]);
+    setList([...list, {id: 0, name: "Команда", count: "Очки", color: 'lightblue', }]);
   }
 
   const incrementCount = () => {
@@ -54,25 +42,10 @@ const App = () => {
         id: id,
         name: `Команда #${id}`,
         count: 0,
-        time: 0,
+        color: 'lightblue',
       }
     ]);
   };
-
-  const editItem = (editedItem) => {
-    //setList(list);
-    /*    const newList = list.map((item) => {
-          item.id === editedItem.id ? { ...item, count: editedItem.count } : item
-        });*/
-
-    //setList(newList);
-
-    /*    const newPosts = posts.map((post) => (
-            post.id === 1
-                ? { ...post, text: 'other text' }
-                : post
-        ));*/
-  }
 
   const removeItem = (id) => {
     setList(list.filter((item) => item.id !== id));
@@ -89,11 +62,14 @@ const App = () => {
         removeItem,
         numberTimer,
         setNumberTimer,
-      }}>
+        modalVisible,
+        setModalVisible,
+        selectColorId,
+        setSelectColorId,
+      }} >
         <NavigationContainer>
           <Tab.Navigator>
             <Tab.Screen name="Score" component={ScoreScreen} />
-            {/*          {<Tab.Screen name="Score" element={<ScoreScreen list={list} addItem={addItem} removeItem={removeItem} />} />}*/}
             <Tab.Screen name="Matches" component={MatchesScreen} />
           </Tab.Navigator>
         </NavigationContainer>
@@ -102,40 +78,107 @@ const App = () => {
 }
 
 const ScoreScreen = () => {
-  /*    const list = props.list;
-      const addItem = props.addItem;
-      const removeItem = props.removeItem;*/
-  const { list, addItem, removeItem, color, setColor } = useContext(DataContext);
+  const { list, addItem, removeItem, modalVisible, setModalVisible, selectColorId, setSelectColorId } = useContext(DataContext);
+
+  const buttonColorChoice = (itemId) => {
+    setModalVisible(true);
+    setSelectColorId(itemId);
+  };
+
+  const modalButtonColorChoice = (itemId, color) => {
+    list.forEach((item) => {
+      if(item.id === itemId) item.color = color;
+    });
+    setModalVisible(false);
+  }
 
   return (
-      <ScrollView>
+      <ScrollView  style={useColorScheme() === 'dark' ? [{ backgroundColor: '#3b3a3a' }] : [{ backgroundColor: 'white' }]}>
         <View style={styles.container}>
-          {/*        <Text style={styles.textName}>{data}</Text>
-          <Text style={styles.textName}>1111111111111</Text>
-          <Text style={styles.textName}>1111111111111</Text>
-          <Text style={styles.textName}>1111111111111</Text>
-          <Text style={styles.textName}>1111111111111</Text>
-          <Text style={styles.textName}>1111111111111</Text>*/}
-          <RenderingList list={list} removeItem={removeItem}/>
+          <View style={styles.containerList}>
+            {
+              list.map((item, index) => {
+                return(
+                    <View style={styles.containerItem} key={index}>
+                      <View style={styles.containerText}>
+                        {
+                          index === 0 ?
+                              <Text style={styles.textSize}>{item.name}</Text> :
+                              <>
+                                <Text style={[styles.textSize, {marginRight: 10}]}>{item.name}</Text>
+                                <TouchableOpacity onPress={() => buttonColorChoice(item.id)}>
+                                  <View style={{ padding: 15, backgroundColor: `${item.color}`, borderRadius: 10 }}></View>
+                                </TouchableOpacity>
+                              </>
+                        }
+                      </View>
+                      <View style={styles.containerTextCount}><Text style={styles.textSize}>{item.count}</Text></View>
+                      <View style={styles.containerText}>
+                        {
+                          index === 0 ?
+                              <Text style={styles.textDelete}>Видалити</Text> :
+                              <TouchableOpacity style={styles.buttonDelete} onPress={() => removeItem(item.id)}>
+                                <Text style={styles.buttonText}>+</Text>
+                              </TouchableOpacity>
+                        }
+                      </View>
+                    </View>
+                );
+              })
+            }
+          </View>
           <View style={styles.containerAddingCommand}>
             <Button color={'green'} title="Добавити команду" onPress={addItem} />
           </View>
-          <StatusBar style="auto" />
 
-
-
-{/*          <PaperProvider>
-            <ColorPickerExample />
-          </PaperProvider>*/}
-
+          <Modal
+              transparent={true}
+              visible={modalVisible}
+              onRequestClose={() => {
+                setModalVisible(false);
+              }}
+          >
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+              <View style={styles.containerModalColor}>
+                <View style={styles.containerColorList}>
+                  <TouchableOpacity onPress={() => modalButtonColorChoice(selectColorId, 'red')}>
+                    <View style={[styles.containerColorItem, {backgroundColor: 'red'}]}></View>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => modalButtonColorChoice(selectColorId, 'orange')}>
+                    <View style={[styles.containerColorItem, {backgroundColor: 'orange'}]}></View>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => modalButtonColorChoice(selectColorId, 'yellow')}>
+                    <View style={[styles.containerColorItem, {backgroundColor: 'yellow'}]}></View>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => modalButtonColorChoice(selectColorId, 'green')}>
+                    <View style={[styles.containerColorItem, {backgroundColor: 'green'}]}></View>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => modalButtonColorChoice(selectColorId, 'blue')}>
+                    <View style={[styles.containerColorItem, {backgroundColor: 'blue'}]}></View>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => modalButtonColorChoice(selectColorId, 'purple')}>
+                    <View style={[styles.containerColorItem, {backgroundColor: 'purple'}]}></View>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => modalButtonColorChoice(selectColorId, 'silver')}>
+                    <View style={[styles.containerColorItem, {backgroundColor: 'silver'}]}></View>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => modalButtonColorChoice(selectColorId, 'black')}>
+                    <View style={[styles.containerColorItem, {backgroundColor: 'black'}]}></View>
+                  </TouchableOpacity>
+                </View>
+                <Button color={'orange'} title="Закрыть" onPress={() => setModalVisible(false)} />
+              </View>
+            </View>
+          </Modal>
 
         </View>
+        <StatusBar style="auto" />
       </ScrollView>
   );
 }
 
 const MatchesScreen = () => {
-  const { list, historyMatches, setHistoryMatches, count, setCount} = useContext(DataContext);
+  const { list, historyMatches, setHistoryMatches, count, setCount, numberTimer, setNumberTimer} = useContext(DataContext);
   const [flagButton, setFlagButton] = useState(true);
   const [flagMatches, setFlagMatches] = useState(true);
   const [flagStatusWinButton, setFlagStatusWinButton] = useState(true);
@@ -143,29 +186,8 @@ const MatchesScreen = () => {
   const [selectedName1, setSelectedName1] = useState("");
   const [selectedName2, setSelectedName2] = useState("");
 
-  const [numberTimer, setNumberTimer] = useState('');
-  const [time, setTime] = useState(new Date());
-  const [timeStartMatch, setTimeStartMatch] = useState(0);
-  const [timeFinishMatch, setTimeFinishMatch] = useState(0);
-
   const [isStopwatchStart, setIsStopwatchStart] = useState(false);
   const [resetStopwatch, setResetStopwatch] = useState(false);
-
-/*  if((selectedName1 !== "") && (selectedName2 !== "")) {
-    setButtonDisabled(false);
-  }*/
-
-/*  useEffect(() => {
-    const handleAppStateChange = (nextAppState) => {
-      // ваш код обработки изменения состояния приложения
-    };
-
-    AppState.addEventListener('change', handleAppStateChange);
-
-    return () => {
-      AppState.removeEventListener('change', handleAppStateChange);
-    };
-  }, []);*/
 
   const changeFlag = () => {
     setFlagButton(!flagButton);
@@ -184,14 +206,11 @@ const MatchesScreen = () => {
     setNumberTimer(formattedText);
   };
 
-  const handleFinishTimer = () => {
-    //setFlagStatusWinButton(false);
-  };
-
   function addScores(numberWin) {
     changeFlag();
     setFlagMatches(true);
     setFlagStatusWinButton(true);
+    setNumberTimer('7');
 
     let id1;
     let id2;
@@ -208,7 +227,7 @@ const MatchesScreen = () => {
     if(numberWin === 1) {
       list.forEach((item) => {
         if(item.name.toLowerCase() === selectedName1.toLowerCase()) {
-          item.count = item.count + 2;
+          item.count = item.count + 3;
           setCount(count + 1);
         }
       });
@@ -217,7 +236,7 @@ const MatchesScreen = () => {
     if(numberWin === 2) {
       list.forEach((item) => {
         if(item.name.toLowerCase() === selectedName2.toLowerCase()) {
-          item.count = item.count + 2;
+          item.count = item.count + 3;
           setCount(count + 1);
         }
       });
@@ -242,15 +261,9 @@ const MatchesScreen = () => {
   }
 
   function startMatch() {
-/*    const currentTime = new Date();
-    const epochTime = currentTime.getTime() / 1000; // Делим на 1000, чтобы получить время в секундах*/
-
     setFlagMatches(false);
-
     setIsStopwatchStart(!isStopwatchStart);
     setResetStopwatch(false);
-/*    setTimeStartMatch(epochTime);
-    setTimeFinishMatch(epochTime + (numberTimer * 60));*/
   }
 
   function RenderingHistoryMatches() {
@@ -258,7 +271,6 @@ const MatchesScreen = () => {
       return(
           <View style={styles.containerHistoryMatchesItem}>
             <Text style={styles.textSize}>Команда #{item.id1}</Text>
-
             <Text style={styles.textSize}>
               {
                 item.numberWin === 1 ?
@@ -268,7 +280,6 @@ const MatchesScreen = () => {
                         <Text> = </Text>
               }
             </Text>
-
             <Text style={styles.textSize}>Команда #{item.id2}</Text>
           </View>
       );
@@ -278,10 +289,6 @@ const MatchesScreen = () => {
   function getStatusButton() {
     return !((selectedName1 !== "") && (selectedName2 !== "") && (numberTimer !== ''));
   }
-
-/*  function getStatusWinButton() {
-    return !((selectedName1 !== "") && (selectedName2 !== "") && (numberTimer !== ''));
-  }*/
 
   function getItems() {
     const items = [];
@@ -295,35 +302,9 @@ const MatchesScreen = () => {
     return items
   }
 
-  function setTimeFunction() {
-    setTime(new Date());
-  }
-
-  const getTimer = () => {
-    setInterval(setTimeFunction, 1000);
-
-    const currentTime = time;
-    const getEpochTime = currentTime.getTime() / 1000; // Делим на 1000, чтобы получить время в секундах
-
-    // Получаем текущее время в формате часы:минуты:секунды
-    const minutes = currentTime.getMinutes();
-    const seconds = currentTime.getSeconds();
-
-    return <Text style={styles.time}>
-      {minutes < 10 ? '0' : ''}{minutes}:{seconds < 10 ? '0' : ''}{seconds}
-    </Text>
-  }
-
   return (
-      <ScrollView>
+      <ScrollView style={useColorScheme() === 'dark' ? [{ backgroundColor: '#3b3a3a' }] : [{ backgroundColor: 'white' }]}>
         <View style={styles.containerMatchesScreen}>
-{/*          <Text style={styles.timer}>{seconds}</Text>
-          <View style={styles.buttonContainer}>
-            <Button title={isActive ? 'Pause' : 'Start'} onPress={handleStartStop} />
-            <Button title="Reset" onPress={handleReset} />
-          </View>*/}
-
-
           <Button color={'red'} title="Очистити історію" onPress={clearHistory} />
           <View style={styles.containerHistoryMatchesList}>
             {RenderingHistoryMatches()}
@@ -338,26 +319,25 @@ const MatchesScreen = () => {
                     flagMatches ?
                         <View>
                           <View style={styles.containerSelect}>
-                          <View style={styles.containerSelectItem}>
-                            <RNPickerSelect
-                                style={styles.selectItem}
-                                onValueChange={(value) => setSelectedName1(value)}
-                                items={getItems()}
-                            />
-                            <Text style={styles.textNotImportant}>Selected value: {selectedName1}</Text>
+                            <View style={styles.containerSelectItem}>
+                              <RNPickerSelect
+                                  style={styles.selectItem}
+                                  onValueChange={(value) => setSelectedName1(value)}
+                                  items={getItems()}
+                              />
+                              <Text style={styles.textNotImportant}>Selected value: {selectedName1}</Text>
+                            </View>
+                            <View style={styles.containerSelectItem}>
+                              <RNPickerSelect
+                                  style={styles.selectItem}
+                                  onValueChange={(value) => setSelectedName2(value)}
+                                  items={getItems()}
+                              />
+                              <Text style={styles.textNotImportant}>Selected value: {selectedName2}</Text>
+                            </View>
                           </View>
-                          <View style={styles.containerSelectItem}>
-                            <RNPickerSelect
-                                style={styles.selectItem}
-                                onValueChange={(value) => setSelectedName2(value)}
-                                items={getItems()}
-                            />
-                            <Text style={styles.textNotImportant}>Selected value: {selectedName2}</Text>
-                          </View>
-                        </View>
                           <View style={styles.containerTimerInput}>
                             <Text style={styles.textSize}>Часу для гри(хв): </Text>
-                            {/*<Text>{number}</Text>*/}
                             <TextInput
                               placeholder="Enter number here"
                               onChangeText={handleInputChange}
@@ -371,6 +351,7 @@ const MatchesScreen = () => {
                           <View style={styles.containerTimer}>
                             <ContainerStopwatchTimerComponent
                                 numberTimer={numberTimer}
+                                setNumberTimer={setNumberTimer}
                                 setFlagStatusWinButton={setFlagStatusWinButton}
                                 isStopwatchStart={isStopwatchStart}
                                 setIsStopwatchStart={setIsStopwatchStart}
@@ -384,7 +365,7 @@ const MatchesScreen = () => {
                               <Button
                                   color={'green'}
                                   disabled={flagStatusWinButton}
-                                  title="Перемога(+2)"
+                                  title="Перемога(+3)"
                                   onPress={() => addScores(1)}
                               ></Button>
                             </View>
@@ -393,7 +374,7 @@ const MatchesScreen = () => {
                               <Button
                                   color={'green'}
                                   disabled={flagStatusWinButton}
-                                  title="Перемога(+2)"
+                                  title="Перемога(+3)"
                                   onPress={() => addScores(2)}
                               ></Button>
                             </View>
@@ -419,6 +400,7 @@ const MatchesScreen = () => {
 class ContainerStopwatchTimerComponent extends Component {
   render() {
     const numberTimer = this.props.numberTimer;
+    const setNumberTimer = this.props.setNumberTimer;
     const setFlagStatusWinButton = this.props.setFlagStatusWinButton;
     const isStopwatchStart = this.props.isStopwatchStart;
     const setIsStopwatchStart = this.props.setIsStopwatchStart;
@@ -428,6 +410,7 @@ class ContainerStopwatchTimerComponent extends Component {
     const toggleStopwatch = () => {
       setIsStopwatchStart(!isStopwatchStart);
       setResetStopwatch(false);
+      setFlagStatusWinButton(true);
     };
 
     const reset = () => {
@@ -435,6 +418,17 @@ class ContainerStopwatchTimerComponent extends Component {
       setResetStopwatch(true);
       setFlagStatusWinButton(false);
     };
+
+    const addingTime = () => {
+      setIsStopwatchStart(true);
+      setFlagStatusWinButton(true);
+      setNumberTimer(`${parseInt(numberTimer) + 1}`);
+    }
+
+    const finishTimer = () => {
+      setIsStopwatchStart(false);
+      setFlagStatusWinButton(false);
+    }
 
     return (
         <View style={styles.containerTimerComponent}>
@@ -445,12 +439,14 @@ class ContainerStopwatchTimerComponent extends Component {
               reset={resetStopwatch}
               options={options}
               getMsecs={(timeMsecs) => {
-                const timeMin = (timeMsecs/1000) / (60/12);
-                if(numberTimer <= timeMin) reset()
+                const timeMin = (timeMsecs/1000) / (60);
+                if(numberTimer <= timeMin) finishTimer()
               }}
           />
-          <View>
+          <View style={styles.containerTimerButton}>
             <Button color={'orange'} title={isStopwatchStart ? 'Stop' : 'Start'} onPress={toggleStopwatch} />
+            <Button color={'orange'} title={'+1хв'} onPress={addingTime} />
+            <Button color={'orange'} title={'Finish'} onPress={reset} />
           </View>
         </View>
     );
@@ -476,6 +472,66 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 20,
     marginBottom: 20,
+  },
+
+  containerItem: {
+    width: '100%',
+    height: 60,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingLeft: 10,
+    paddingRight: 10,
+  },
+
+  containerText: {
+    width: 120,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  containerTextCount: {
+    width: 90,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  textDelete: {
+    fontSize: 15,
+  },
+
+  buttonDelete: {
+    alignItems: 'center',
+  },
+
+  buttonText: {
+    color: "red",
+    fontSize: 40,
+    transform: "rotate(45deg)",
+  },
+
+  containerModalColor: {
+    flexDirection: 'column',
+    gap: 20,
+    width: 250,
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+  },
+
+  containerColorList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
+    alignItems: 'center',
+  },
+
+  containerColorItem: {
+    padding: 22,
+    borderRadius: 10,
   },
 
   container: {
@@ -547,7 +603,7 @@ const styles = StyleSheet.create({
   },
 
   containerSelectItem: {
-    width: '47%',
+    width: '50%',
   },
 
   selectItem: {
@@ -578,7 +634,7 @@ const styles = StyleSheet.create({
   },
 
   textSize: {
-    fontSize: 17,
+    fontSize: 16,
   },
 
   containerTimerInput: {
@@ -597,6 +653,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+
+  containerTimerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+  }
 
 });
 
